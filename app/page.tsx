@@ -383,7 +383,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ symbols }),
           headers: { 'Content-Type': 'application/json' }
         }),
-        fetch('/data/latest_sentiment.json', { cache: 'no-store' }) // 假设放在 public/data
+        fetch('../../data/latest_sentiment.json', { cache: 'no-store' }) // 假设放在 public/data
       ]);
 
       const marketData = await marketRes.json();
