@@ -112,7 +112,86 @@ const Sparkline = ({ data, color }: { data: any[]; color: string }) => {
   );
 };
 
-// 管理 Watchlist 的弹窗
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  TouchSensor
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react'; // 别忘了导入这个图标
+
+// --- 子组件：可拖拽的单行 ---
+function SortableItem({ id, item, onDelete }: { id: string; item: WatchlistItem; onDelete: (id: string) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto', // 拖拽时层级最高
+    opacity: isDragging ? 0.8 : 1,
+    position: 'relative' as 'relative', // TypeScript 需要显式转换
+  };
+
+  return (
+      <div
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+              "flex justify-between items-center p-3 rounded border select-none touch-none",
+              isDragging ? "bg-blue-50 border-blue-300 shadow-lg" : "bg-slate-50 border-slate-100"
+          )}
+      >
+        <div className="flex items-center flex-1 min-w-0 mr-2">
+          {/* 拖拽手柄 - 只在这里绑定 listeners */}
+          <button
+              {...attributes}
+              {...listeners}
+              className="mr-3 text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing p-1 touch-none"
+          >
+            <GripVertical size={18} />
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-700">{item.symbol}</span>
+              <span className="text-[10px] uppercase bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono shrink-0">
+              {item.type}
+            </span>
+            </div>
+            <div className="text-xs text-slate-500 truncate">{item.name}</div>
+          </div>
+        </div>
+
+        <button
+            onClick={() => onDelete(item.symbol)}
+            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+  );
+}
+
+// --- 主组件：Watchlist 弹窗 ---
 const WatchlistModal = ({
                           isOpen,
                           onClose,
@@ -124,16 +203,49 @@ const WatchlistModal = ({
   currentList: WatchlistItem[];
   onUpdate: (newList: WatchlistItem[]) => void;
 }) => {
-  const [list, setList] = useState(currentList);
+  const [list, setList] = useState<WatchlistItem[]>(currentList);
   const [newSymbol, setNewSymbol] = useState("");
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<AssetType>("stock");
 
-  // 同步外部状态
-  useEffect(() => setList(currentList), [currentList]);
+  // 初始化 Sensors (传感器)
+  // PointerSensor 兼容鼠标和触摸，ActivationConstraint 防止误触 (移动5px才算拖拽)
+  const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 5,
+        },
+      }),
+      useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+      })
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setList(currentList);
+    }
+  }, [isOpen, currentList]);
+
+  // 处理拖拽结束
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setList((items) => {
+        const oldIndex = items.findIndex((item) => item.symbol === active.id);
+        const newIndex = items.findIndex((item) => item.symbol === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   const handleAdd = () => {
     if (!newSymbol || !newName) return;
+    if (list.some(item => item.symbol === newSymbol.toUpperCase())) {
+      alert("Symbol already exists!");
+      return;
+    }
     const newItem: WatchlistItem = {
       symbol: newSymbol.toUpperCase(),
       name: newName,
@@ -141,9 +253,8 @@ const WatchlistModal = ({
       search_term: `${newSymbol} ${newName} ${newType === 'stock' ? 'stock' : newType}`,
       monitor_frequency: "30m"
     };
-    const updated = [...list, newItem];
-    setList(updated);
-    // 重置表单
+    // 新增项目默认放最后，也可以用 unshift 放最前
+    setList([...list, newItem]);
     setNewSymbol("");
     setNewName("");
   };
@@ -153,106 +264,158 @@ const WatchlistModal = ({
   };
 
   const handleSave = async () => {
-    // 调用 API 保存
-    await fetch('/api/watchlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(list)
-    });
-    onUpdate(list);
-    onClose();
+    try {
+      await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(list)
+      });
+      onUpdate(list);
+      onClose();
+    } catch (e) {
+      alert("Save failed, check console");
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <h2 className="font-bold text-slate-800">管理关注列表</h2>
-            <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 flex flex-col max-h-[85vh]">
+
+          {/* Header */}
+          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+            <h2 className="font-bold text-slate-800 text-lg">Manage Watchlist</h2>
+            <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-slate-600">
+              <X size={24} />
+            </button>
           </div>
 
-          <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
-            {list.map(item => (
-                <div key={item.symbol} className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
-                  <div>
-                    <span className="font-bold text-slate-700">{item.symbol}</span>
-                    <span className="text-xs text-slate-500 ml-2">{item.name}</span>
-                    <span className="text-[10px] uppercase bg-slate-200 text-slate-600 px-1 py-0.5 rounded ml-2">{item.type}</span>
-                  </div>
-                  <button onClick={() => handleDelete(item.symbol)} className="text-red-400 hover:text-red-600">
-                    <Trash2 size={16} />
-                  </button>
+          {/* List (Draggable Area) */}
+          <div className="p-4 overflow-y-auto overscroll-contain flex-1 bg-white">
+            {list.length === 0 ? (
+                <div className="text-center text-slate-400 py-8 text-sm">
+                  列表为空，请在下方添加资产。
                 </div>
-            ))}
+            ) : (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                      items={list.map(i => i.symbol)}
+                      strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {list.map(item => (
+                          <SortableItem
+                              key={item.symbol}
+                              id={item.symbol}
+                              item={item}
+                              onDelete={handleDelete}
+                          />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+            )}
           </div>
 
-          <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-3">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">添加新资产</h3>
+          {/* Footer (Add Form) */}
+          <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0 space-y-3">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Add New Asset</h3>
             <div className="grid grid-cols-2 gap-2">
               <input
-                  placeholder="Symbol (e.g. TSLA)"
+                  placeholder="Symbol"
                   value={newSymbol} onChange={e => setNewSymbol(e.target.value)}
-                  className="p-2 border rounded text-sm outline-none focus:border-blue-500"
+                  className="p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500 transition-all"
               />
               <input
-                  placeholder="Name (e.g. Tesla)"
+                  placeholder="Name"
                   value={newName} onChange={e => setNewName(e.target.value)}
-                  className="p-2 border rounded text-sm outline-none focus:border-blue-500"
+                  className="p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500 transition-all"
               />
             </div>
             <select
                 value={newType}
                 onChange={e => setNewType(e.target.value as AssetType)}
-                className="w-full p-2 border rounded text-sm outline-none bg-white"
+                className="w-full p-2 border border-slate-200 rounded text-sm outline-none bg-white"
             >
               <option value="stock">Stock</option>
               <option value="crypto">Crypto</option>
               <option value="commodity">Commodity</option>
             </select>
-            <div className="flex gap-2 pt-2">
-              <button onClick={handleAdd} className="flex-1 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 text-sm font-medium">加入列表</button>
-              <button onClick={handleSave} className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">保存更改</button>
+            <div className="flex gap-3 pt-2">
+              <button
+                  onClick={handleAdd}
+                  className="flex-1 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm font-semibold transition-colors flex justify-center items-center gap-2"
+              >
+                <Plus size={16}/> Add
+              </button>
+              <button
+                  onClick={handleSave}
+                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold shadow-sm shadow-blue-200 transition-colors"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
+
         </div>
       </div>
   );
 };
 
-// 详情弹窗
+// 详情弹窗组件 (修复移动端滚动问题)
 const DetailModal = ({ asset, onClose }: { asset: CombinedAsset; onClose: () => void }) => {
   if (!asset) return null;
 
   return (
       <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          // 修改点 1: z-index 调高，确保覆盖一切
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
           onClick={onClose}
       >
         <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl"
+            // 修改点 2:
+            // - max-h-[85vh]: 限制高度不超过屏幕的 85%
+            // - flex flex-col: 让内部元素垂直排列，为了让 Header 固定，Content 滚动
+            className="bg-white border border-slate-200 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
         >
-          <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50">
+          {/* Header - 固定不滚动 */}
+          <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50 shrink-0">
             <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-slate-900">{asset.name}</h2>
-                <span className="text-slate-500 font-mono text-sm bg-slate-200 px-2 py-1 rounded">{asset.symbol}</span>
+                <h2 className="text-xl md:text-2xl font-bold text-slate-900 line-clamp-1">{asset.name}</h2>
+                <span className="text-slate-500 font-mono text-xs md:text-sm bg-slate-200 px-2 py-1 rounded shrink-0">{asset.symbol}</span>
               </div>
-              <div className="mt-2 flex items-center gap-4">
-              <span className="text-3xl font-mono text-slate-900 tracking-tighter">
+              <div className="mt-2 flex items-center gap-3 md:gap-4 flex-wrap">
+              <span className="text-2xl md:text-3xl font-mono text-slate-900 tracking-tighter">
                 ${asset.market?.price?.toLocaleString() ?? "---"}
               </span>
                 <SentimentBadge score={asset.sentiment?.sentiment_score} label={asset.sentiment?.sentiment_label} />
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">✕</button>
+            {/* 关闭按钮区域加大，方便手指点击 */}
+            <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 -mr-2 -mt-2"
+            >
+              <X size={24} />
+            </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          {/* Content - 可滚动区域 */}
+          {/* 修改点 3: overflow-y-auto 开启垂直滚动 */}
+          <div className="p-6 space-y-6 overflow-y-auto overscroll-contain">
             {asset.sentiment ? (
                 <>
                   {asset.sentiment.is_alert && (
@@ -268,7 +431,7 @@ const DetailModal = ({ asset, onClose }: { asset: CombinedAsset; onClose: () => 
                     <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
                       <Search size={14} /> AI 深度分析摘要
                     </h3>
-                    <p className="text-slate-700 leading-relaxed text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <p className="text-slate-700 leading-relaxed text-sm bg-slate-50 p-4 rounded-lg border border-slate-100 text-justify">
                       {asset.sentiment.summary}
                     </p>
                   </div>
@@ -277,11 +440,13 @@ const DetailModal = ({ asset, onClose }: { asset: CombinedAsset; onClose: () => 
                         <h3 className="text-blue-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
                           <Zap size={14} /> 趋势预判与逻辑
                         </h3>
-                        <div className="text-slate-700 leading-relaxed text-sm bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div className="text-slate-700 leading-relaxed text-sm bg-blue-50 p-4 rounded-lg border border-blue-100 text-justify">
                           {asset.sentiment.prediction.rationale}
                         </div>
                       </div>
                   )}
+                  {/* 底部留白，防止内容贴底不好看 */}
+                  <div className="h-4"></div>
                 </>
             ) : (
                 <div className="text-center py-10 text-slate-400">
