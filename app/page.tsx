@@ -422,7 +422,7 @@ export default function DashboardPage() {
   // Initial Load & Refresh
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(watchlist), 30000); // 30s 刷新
+    const interval = setInterval(() => fetchData(), 30000); // 30s 刷新
     return () => clearInterval(interval);
   }, []);
 

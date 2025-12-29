@@ -42,8 +42,6 @@ export async function POST(request: Request) {
             };
         });
 
-        console.log(histories);
-
         // 处理 History
         histories.forEach((h) => {
             if (marketData[h.symbol] && h.data) {
