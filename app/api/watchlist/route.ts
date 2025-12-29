@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const WATCHLIST_FILE = path.join(process.cwd(), 'data', 'watchlist.json');
+const WATCHLIST_FILE = path.join(process.cwd(), '../data', 'watchlist.json');
 
 // GET: 读取列表
 export async function GET() {
