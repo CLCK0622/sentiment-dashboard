@@ -1,0 +1,208 @@
+{
+  "metadata": {
+    "last_updated": "2025-12-27T21:00:43.567035Z",
+    "source": "Google News RSS",
+    "status": "success"
+  },
+  "tickers": {
+    "TSLA": {
+      "sentiment_score": 0,
+      "sentiment_label": "Neutral",
+      "summary": "特斯拉的市场情绪目前呈现中性。尽管Robotaxi项目进展的积极消息和分析师上调目标价带来了乐观情绪，但NHTSA调查、电动车税收抵免的负面影响以及机构减持等因素抵消了这些利好。",
+      "events": [
+        {
+          "title": "Analyst Endorsement (Gary Black)",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "EV Tax Credit Developments ('Shock')",
+          "impact": "Negative",
+          "source": "Media Report"
+        },
+        {
+          "title": "Inclusion in 'Magnificent Seven' Stocks Ranking",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "NHTSA Regulatory Probe",
+          "impact": "Negative",
+          "source": "Media Report"
+        },
+        {
+          "title": "Robotaxi Project Anticipation & Messaging",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Deutsche Bank Price Target Hike",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Institutional Share Reduction (Pacer Advisors)",
+          "impact": "Negative",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "NVDA": {
+      "sentiment_score": 9,
+      "sentiment_label": "Greed",
+      "summary": "最新的新闻标题显示，英伟达（NVDA）的市场情绪非常乐观，多篇文章推荐其为值得购买的股票，并强调了公司在人工智能芯片领域的领先地位及其通过战略交易巩固主导地位的能力。",
+      "events": [
+        {
+          "title": "Market Buy Recommendation",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Groq Inference Deal",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Stock Price Appreciation",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Strategic Dominance Via Balance Sheet",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Analyst Price Target Reset",
+          "impact": "Neutral",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "AAPL": {
+      "sentiment_score": 6,
+      "sentiment_label": "Greed",
+      "summary": "市场情绪积极，受德州法律风险解除、机构买入、摩根大通对iPhone需求看好以及中国市场需求意外增长等利好消息提振，尽管App Store面临监管压力，整体而言呈现看涨态势。",
+      "events": [
+        {
+          "title": "Texas Age-Check Law Stayed",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Institutional Shares Purchase",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "JPMorgan Confidence on iPhone Demand-Supply Parity",
+          "impact": "Positive",
+          "source": "Analyst Report / Media Report"
+        },
+        {
+          "title": "China iPhone Demand Surprise",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "App Store Regulatory Pressure",
+          "impact": "Negative",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "MSFT": {
+      "sentiment_score": 2,
+      "sentiment_label": "Neutral",
+      "summary": "微软股价在周末前维持在488美元附近，日常波动不大。尽管假日市场平静，但其AI基础设施建设的积极进展被提及，同时也有少量机构出售股票。",
+      "events": [
+        {
+          "title": "AI Infrastructure Buildout",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Institutional Share Sale",
+          "impact": "Negative",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "GOOGL": {
+      "sentiment_score": 8,
+      "sentiment_label": "Greed",
+      "summary": "Alphabet (GOOGL) 近期股价上涨，在AI领域展现主导地位并超越其他科技巨头，市场对其未来增长抱有强劲信心。尽管存在机构减持，整体情绪仍偏向乐观。",
+      "events": [
+        {
+          "title": "Stock Price Rise",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Institutional Selling",
+          "impact": "Negative",
+          "source": "Media Report"
+        },
+        {
+          "title": "AI Dominance / Future Growth",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Peer Outperformance (Mag 7)",
+          "impact": "Positive",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "META": {
+      "sentiment_score": 7,
+      "sentiment_label": "Greed",
+      "summary": "Meta Platforms的市场情绪偏向积极，主要受其在AI领域的巨额投资和战略合作推动，尽管存在一些新的监管担忧和对青少年使用的关注。",
+      "events": [
+        {
+          "title": "AI Infrastructure Investment",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Analyst Buy Recommendation",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Strategic AI Talent/Investment",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Regulatory Scrutiny",
+          "impact": "Negative",
+          "source": "Media Report"
+        }
+      ]
+    },
+    "AMZN": {
+      "sentiment_score": 8,
+      "sentiment_label": "Greed",
+      "summary": "亚马逊近期因与OpenAI的380亿美元大额交易以及AWS在云市场的主导地位而股价大幅上涨，显示出强劲的看涨情绪。",
+      "events": [
+        {
+          "title": "OpenAI $38 Billion Deal",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "AWS Cloud Dominance",
+          "impact": "Positive",
+          "source": "Media Report"
+        },
+        {
+          "title": "Weekly Stock Price Increase",
+          "impact": "Positive",
+          "source": "Media Report"
+        }
+      ]
+    }
+  }
+}

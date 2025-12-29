@@ -1,0 +1,16 @@
+[
+  {
+    "symbol": "TSLA",
+    "name": "Tesla",
+    "type": "stock",
+    "search_term": "TSLA Tesla stock",
+    "monitor_frequency": "30m"
+  },
+  {
+    "symbol": "NVDA",
+    "name": "Nvidia",
+    "type": "stock",
+    "search_term": "NVDA Nvidia stock",
+    "monitor_frequency": "30m"
+  }
+]
