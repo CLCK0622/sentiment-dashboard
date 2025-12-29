@@ -38,6 +38,11 @@ interface SentimentData {
   timestamp?: string;
 }
 
+interface SentimentResponse {
+  metadata: { last_updated: string };
+  tickers: Record<string, SentimentData>; // 关键：允许通过字符串 key 访问
+}
+
 interface MarketData {
   price: number;
   changePercent: number;
@@ -388,7 +393,10 @@ export default function DashboardPage() {
 
       const marketData = await marketRes.json();
 
-      let sentimentJson = { tickers: {}, metadata: { last_updated: "" } };
+      let sentimentJson: SentimentResponse = {
+        tickers: {},
+        metadata: { last_updated: "" }
+      };
       try { sentimentJson = await sentimentRes.json(); } catch(e) {}
 
       // 3. Merge Data
