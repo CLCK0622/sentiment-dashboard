@@ -369,11 +369,13 @@ export default function DashboardPage() {
       let targetList = currentWatchlist;
       if (!targetList) {
         const wlRes = await fetch('/api/watchlist');
+        if (!wlRes.ok) throw new Error("Watchlist fetch failed"); // 添加检查
         targetList = await wlRes.json();
-        setWatchlist(targetList || []);
       }
 
-      if (!targetList || targetList.length === 0) {
+      if (!targetList) return; // 如果失败直接退出，保留页面上旧的 assets
+
+      if (targetList.length === 0) {
         setAssets([]);
         setIsLoading(false);
         return;
@@ -390,6 +392,8 @@ export default function DashboardPage() {
         }),
         fetch('data/latest_sentiment.json', { cache: 'no-store' }) // 假设放在 public/data
       ]);
+
+      if (!marketRes.ok) throw new Error("Market fetch failed");
 
       const marketData = await marketRes.json();
 
@@ -409,7 +413,7 @@ export default function DashboardPage() {
       setAssets(merged);
       setLastUpdated(sentimentJson.metadata?.last_updated || new Date().toISOString());
     } catch (error) {
-      console.error("Fetch Error:", error);
+      console.error("Fetch Error (Keeping old data):", error);
     } finally {
       setIsLoading(false);
     }
