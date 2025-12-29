@@ -388,7 +388,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ symbols }),
           headers: { 'Content-Type': 'application/json' }
         }),
-        fetch('/data/latest_sentiment.json', { cache: 'no-store' }) // 假设放在 public/data
+        fetch('data/latest_sentiment.json', { cache: 'no-store' }) // 假设放在 public/data
       ]);
 
       const marketData = await marketRes.json();
@@ -433,7 +433,7 @@ export default function DashboardPage() {
             </h1>
             <p className="text-slate-500 text-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              System Operational • AI Models: o1-mini
+              System Operational • AI Models: GPT 5.2, GPT 5-mini
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
