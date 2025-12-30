@@ -536,6 +536,9 @@ export default function DashboardPage() {
         const wlRes = await fetch('/api/watchlist');
         if (!wlRes.ok) throw new Error("Watchlist fetch failed"); // 添加检查
         targetList = await wlRes.json();
+        if (targetList) {
+          setWatchlist(targetList);
+        }
       }
 
       if (!targetList) return; // 如果失败直接退出，保留页面上旧的 assets
