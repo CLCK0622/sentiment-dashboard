@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         }
 
         // 1. 获取实时报价 (批量)
-        const yf = new YahooFinance()
+        const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
         const quotes = await yf.quote(symbols);
 
         // 2. 获取迷你走势图 (并行)
