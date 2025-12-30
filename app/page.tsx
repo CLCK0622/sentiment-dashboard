@@ -610,7 +610,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col items-end gap-3">
             <button
-                onClick={() => setIsSettingsOpen(true)}
+                onClick={() => {
+                  fetchData().then(() => {
+                    setIsSettingsOpen(true);
+                  });
+                }}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 text-slate-700 transition-colors"
             >
               <Settings size={14} /> Manage Watchlist
