@@ -8,11 +8,36 @@ const HISTORY_CACHE: Record<string, { data: any[], timestamp: number }> = {};
 const QUOTE_TTL = 30 * 1000;      // 30秒
 const HISTORY_TTL = 15 * 60 * 1000; // 15分钟
 
+// 🚦 全局请求频率控制：记录最后一次请求时间
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 2000; // 最小请求间隔 2 秒
+
 // ✅ 关键修复：将 YahooFinance 实例移到外面，全局共享
 const yf = new YahooFinance();
 
 export async function POST(request: Request) {
     try {
+        // 🚦 防止前端疯狂请求
+        const timeSinceLastRequest = Date.now() - lastRequestTime;
+        if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+            console.log(`[API] 🛑 Rate limit: wait ${MIN_REQUEST_INTERVAL - timeSinceLastRequest}ms`);
+            // 直接返回缓存数据，不发新请求
+            const body = await request.json();
+            const { symbols } = body;
+            const marketData: Record<string, any> = {};
+
+            symbols?.forEach((sym: string) => {
+                marketData[sym] = {
+                    ...(QUOTE_CACHE[sym]?.data || { price: 0, changePercent: 0 }),
+                    history: HISTORY_CACHE[sym]?.data || []
+                };
+            });
+
+            return NextResponse.json(marketData);
+        }
+
+        lastRequestTime = Date.now();
+
         const body = await request.json();
         const { symbols } = body;
 
@@ -32,22 +57,33 @@ export async function POST(request: Request) {
         if (quotesToFetch.length > 0) {
             console.log(`[API] ⚡️ Batch Fetching Quotes for: ${quotesToFetch.length} items`);
             try {
-                // ✅ 修复1: 移除 returnErrors 参数
-                const quotes = await yf.quote(quotesToFetch) as any[];
+                // 🚨 如果股票太多，分批处理，每批最多 10 个
+                const batchSize = 10;
+                for (let i = 0; i < quotesToFetch.length; i += batchSize) {
+                    const batch = quotesToFetch.slice(i, i + batchSize);
+                    console.log(`[API] 📦 Fetching batch ${Math.floor(i/batchSize) + 1}: ${batch.join(', ')}`);
 
-                if (Array.isArray(quotes)) {
-                    quotes.forEach((q: any) => {
-                        QUOTE_CACHE[q.symbol] = {
-                            data: {
-                                price: q.regularMarketPrice,
-                                changePercent: q.regularMarketChangePercent
-                            },
-                            timestamp: now
-                        };
-                    });
+                    const quotes = await yf.quote(batch) as any[];
+
+                    if (Array.isArray(quotes)) {
+                        quotes.forEach((q: any) => {
+                            QUOTE_CACHE[q.symbol] = {
+                                data: {
+                                    price: q.regularMarketPrice,
+                                    changePercent: q.regularMarketChangePercent
+                                },
+                                timestamp: now
+                            };
+                        });
+                    }
+
+                    // 批次之间也加个小延迟
+                    if (i + batchSize < quotesToFetch.length) {
+                        await new Promise(res => setTimeout(res, 500));
+                    }
                 }
-            } catch (e) {
-                console.error("Quote Fetch Error:", e);
+            } catch (e: any) {
+                console.error("Quote Fetch Error:", e.message || e);
             }
         }
 
