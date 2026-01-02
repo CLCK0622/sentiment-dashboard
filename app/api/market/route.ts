@@ -66,12 +66,13 @@ export async function POST(request: Request) {
 
             // 🚨 核心修改：不要用 Promise.all，改用 for 循环一个一个做
             // 这样我们就在后台慢慢跑，不会触发 Yahoo 的神经
-            (async () => {
+            await (async () => {
                 for (const sym of historiesToFetch) {
                     try {
                         // 获取最近 24 小时数据
-                        const result = await yf.historical(sym, {
+                        const result = yf.historical(sym, {
                             period1: new Date(Date.now() - 24 * 60 * 60 * 1000),
+                            period2: new Date(Date.now()),
                             interval: '15m',
                         });
 
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
                         if (Array.isArray(result)) candles = result;
                         else if (typeof result === 'object' && Array.isArray((result as any).quotes)) candles = (result as any).quotes;
 
-                        const historyData = candles.map((c: any) => ({ value: c.close }));
+                        const historyData = candles.map((c: any) => ({value: c.close}));
 
                         HISTORY_CACHE[sym] = {
                             data: historyData,
