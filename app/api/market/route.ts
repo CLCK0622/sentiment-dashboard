@@ -59,36 +59,55 @@ export async function POST(request: Request) {
         });
 
         if (historiesToFetch.length > 0) {
-            console.log(`[API] 📉 Updating History for: ${historiesToFetch.join(', ')}`);
+            console.log(`[API] 📉 Updating History for: ${historiesToFetch.length} items (Serial Mode)`);
 
-            await Promise.all(historiesToFetch.map(async (sym) => {
-                try {
-                    const result = await yf.historical(sym, {
-                        period1: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                        period2: new Date(Date.now()),
-                        interval: '15m',
-                    });
+            // 🛠️ 辅助函数：延时器
+            const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-                    let candles: any[] = [];
-                    if (Array.isArray(result)) candles = result;
-                    else if (typeof result === 'object' && Array.isArray((result as any).quotes)) candles = (result as any).quotes;
+            // 🚨 核心修改：不要用 Promise.all，改用 for 循环一个一个做
+            // 这样我们就在后台慢慢跑，不会触发 Yahoo 的神经
+            (async () => {
+                for (const sym of historiesToFetch) {
+                    try {
+                        // 获取最近 24 小时数据
+                        const result = await yf.historical(sym, {
+                            period1: new Date(Date.now() - 24 * 60 * 60 * 1000),
+                            interval: '15m',
+                        });
 
-                    const historyData = candles.map((c: any) => ({ value: c.close }));
+                        let candles: any[] = [];
+                        if (Array.isArray(result)) candles = result;
+                        else if (typeof result === 'object' && Array.isArray((result as any).quotes)) candles = (result as any).quotes;
 
-                    HISTORY_CACHE[sym] = {
-                        data: historyData,
-                        timestamp: now
-                    };
-                } catch (e) {
-                    console.error(`History fail for ${sym}`);
+                        const historyData = candles.map((c: any) => ({ value: c.close }));
+
+                        HISTORY_CACHE[sym] = {
+                            data: historyData,
+                            timestamp: Date.now() // 更新时间戳
+                        };
+
+                        // ✅ 成功了一个，打印个简短的 log
+                        console.log(`[API] ✅ Updated: ${sym}`);
+
+                    } catch (e: any) {
+                        // 打印出具体错误，看看到底是 429 还是 404
+                        console.error(`[API] ❌ History fail for ${sym}: ${e.message || e}`);
+                    }
+
+                    // 😴 每次请求后，睡 500 毫秒 (0.5秒)
+                    // 20 个股票大概需要 10 秒跑完，完全可以接受
+                    await delay(500);
                 }
-            }));
+                console.log(`[API] 🏁 All history updates finished.`);
+            })(); // 注意这里是立即执行的异步函数，不阻塞主线程返回 Response
         }
 
-        // --- 第三步：组装最终结果返回给前端 ---
+        // --- 第三步：组装最终结果 (这里不需要 await 上面的循环完成，直接返回旧缓存或空) ---
         symbols.forEach(sym => {
             marketData[sym] = {
                 ...(QUOTE_CACHE[sym]?.data || { price: 0, changePercent: 0 }),
+                // 注意：如果是第一次加载，History 可能是空的，因为上面的循环还在后台跑
+                // 用户可能要等 30 秒后的下一次刷新才能看到图，这是为了稳定性的妥协
                 history: HISTORY_CACHE[sym]?.data || []
             };
         });
