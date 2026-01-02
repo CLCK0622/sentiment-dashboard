@@ -62,37 +62,54 @@ export async function POST(request: Request) {
 
             const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-            // ✅ 使用外部的 yf 实例，不再在循环内重新创建
-            for (const sym of historiesToFetch) {
-                try {
-                    // ✅ 修复2: 改用 chart API，支持 15m 间隔
-                    const result = await yf.chart(sym, {
-                        period1: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                        period2: new Date(),
-                        interval: '15m',
-                    });
+            // 🔄 带重试的请求函数
+            const fetchWithRetry = async (sym: string, retries = 3): Promise<boolean> => {
+                for (let attempt = 1; attempt <= retries; attempt++) {
+                    try {
+                        const result = await yf.chart(sym, {
+                            period1: new Date(Date.now() - 24 * 60 * 60 * 1000),
+                            period2: new Date(),
+                            interval: '15m',
+                        });
 
-                    // chart API 返回的数据结构
-                    let candles: any[] = [];
-                    if (result && Array.isArray(result.quotes)) {
-                        candles = result.quotes;
+                        let candles: any[] = [];
+                        if (result && Array.isArray(result.quotes)) {
+                            candles = result.quotes;
+                        }
+
+                        const historyData = candles.map((c: any) => ({ value: c.close }));
+
+                        HISTORY_CACHE[sym] = {
+                            data: historyData,
+                            timestamp: Date.now()
+                        };
+
+                        console.log(`[API] ✅ Updated: ${sym}`);
+                        return true;
+
+                    } catch (e: any) {
+                        const is429 = e.message?.includes('Too Many Requests') || e.message?.includes('429');
+
+                        if (is429 && attempt < retries) {
+                            // 如果是 429 错误且还有重试次数，等更久再试
+                            const waitTime = 2000 * attempt; // 2秒, 4秒, 6秒
+                            console.log(`[API] ⏳ Rate limited ${sym}, retry ${attempt}/${retries} in ${waitTime}ms`);
+                            await delay(waitTime);
+                        } else {
+                            console.error(`[API] ❌ History fail for ${sym}: ${e.message || e}`);
+                            return false;
+                        }
                     }
-
-                    const historyData = candles.map((c: any) => ({ value: c.close }));
-
-                    HISTORY_CACHE[sym] = {
-                        data: historyData,
-                        timestamp: Date.now()
-                    };
-
-                    console.log(`[API] ✅ Updated: ${sym}`);
-
-                } catch (e: any) {
-                    console.error(`[API] ❌ History fail for ${sym}: ${e.message || e}`);
                 }
+                return false;
+            };
 
-                // 😴 每次请求间隔 500ms
-                await delay(500);
+            // 逐个处理，每次间隔更长
+            for (const sym of historiesToFetch) {
+                await fetchWithRetry(sym);
+
+                // 🐌 增加到 1.5 秒间隔，避免触发限流
+                await delay(1500);
             }
             console.log(`[API] 🏁 All history updates finished.`);
         }
